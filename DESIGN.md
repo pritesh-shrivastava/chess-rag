@@ -78,7 +78,6 @@ LangChain agents later.
 Frontend:      Streamlit
 Vector Store:  FAISS (local file, committed to repo as data/chess_index.faiss)
 Embeddings:    sentence-transformers (all-MiniLM-L6-v2) — local, free, no API key
-LLM (local):   Ollama with Llama 3.1 8B — zero cost, zero config after install
 LLM (hosted):  Groq free tier (Llama 3.1 70B) — 14,400 req/day free, ~200 tok/s
                Users create free Groq account (2 min), set GROQ_API_KEY in HF Space
 PGN Parsing:   python-chess
@@ -159,11 +158,10 @@ chess_rag/
 │   ├── ingestion.py          # Build FAISS index from patterns.md (run once, commit output)
 │   └── prompts.py            # build_prompt: system prompt + citation instructions
 ├── data/
-│   ├── chess_index.faiss     # Pre-built FAISS index (patterns only, ~75KB, committed directly)
-│   ├── chess_index_docs.pkl  # Pattern document store
+│   ├── chess_index.pkl       # Serialized TF-IDF vectorizer + matrix (generated, committed)
 │   └── sources/
-│       ├── eco.json          # Lichess ECO database (loaded as Python dict, NOT indexed in FAISS)
-│       └── patterns.md       # 25-50 chess pattern descriptions (200 words each, LLM-generated + reviewed)
+│       ├── a.tsv–e.tsv       # Lichess ECO database (~3000 openings, loaded as Python dict)
+│       └── patterns.md       # 53 chess pattern descriptions (200 words each, LLM-generated + reviewed)
 ├── tests/
 │   ├── conftest.py           # Shared fixtures: sample PGNs, sample boards
 │   ├── test_parser.py        # 9 tests covering parse, truncation, error paths
@@ -251,17 +249,11 @@ game_idx = st.selectbox("Select game", range(len(games)), format_func=lambda i: 
 @st.cache_resource
 def load_index():
     try:
-        index = faiss.read_index("data/chess_index.faiss")
-        with open("data/chess_index_docs.pkl", "rb") as f:
-            docs = pickle.load(f)
-        return index, docs
+        with open("data/chess_index.pkl", "rb") as f:
+            return pickle.load(f)  # {"vectorizer": ..., "matrix": ..., "docs": [...]}
     except FileNotFoundError:
-        st.error("Chess knowledge base not found. Run: python -m rag.ingestion")
+        st.error("Chess knowledge base not found. Run: uv run python -m rag.ingestion")
         st.stop()
-
-@st.cache_resource
-def load_embedding_model():
-    return SentenceTransformer("all-MiniLM-L6-v2")
 ```
 
 ### patterns.md Format
@@ -306,15 +298,52 @@ Example: [1-2 move sequence or FEN context]
 
 ## Next Steps
 
-1. `git init` + `git lfs track "*.faiss" "*.pkl"` + `requirements.txt`
-2. Build `rag/fetch_lichess_games.py` — download ~1000 annotated games from Lichess API
-3. Build `rag/ingestion.py` — embed with sentence-transformers, save FAISS index
-4. Build `rag/retriever.py` — `retrieve_opening_theory`, `retrieve_similar_positions`, `retrieve_pattern_explanation`
-5. Build `rag/prompts.py` — system prompt with citation instructions
-6. Build `app.py` — PGN upload → move dropdown → retrieval → LLM stream → display
-7. Add Groq/Ollama LLM switching logic with quota fallback message
-8. Deploy to HF Spaces, configure `GROQ_API_KEY` secret, test with a real game
-9. Write README with architecture diagram + demo GIF
+### Done — pre-code scaffold complete
+- [x] `pyproject.toml` — dependencies locked with uv (streamlit, chess, scikit-learn, groq, python-dotenv)
+- [x] `.python-version` — pinned to 3.11
+- [x] `CLAUDE.md` — commands, architecture, skill routing
+- [x] `README.md` — Mermaid flowchart, uv install instructions, stack table
+- [x] `.env.example`, `.gitignore`
+- [x] `rag/__init__.py`, `tests/__init__.py` — package stubs
+- [x] `data/sources/patterns.md` — 53 patterns, LLM-generated (needs chess accuracy review)
+- [x] `data/sources/a.tsv` through `e.tsv` — full Lichess ECO database (~3000 openings)
+
+### Implementation order
+
+1. **`rag/ingestion.py`** ← start here; nothing else works until the index exists
+   - Load all 5 TSV files (`a.tsv`–`e.tsv`), strip move numbers with `re.sub(r'\d+\.+\s*', '', pgn)`, build ECO dict keyed by SAN string
+   - Load `data/sources/patterns.md`, split on `## ` headings → list of doc strings
+   - Fit TF-IDF vectorizer on pattern docs, serialize vectorizer + matrix to `data/chess_index.pkl`
+   - Run with: `uv run python -m rag.ingestion`
+
+2. **`rag/retriever.py`**
+   - `retrieve_opening_theory(moves)` — ECO dict prefix match (longest prefix wins)
+   - `describe_position(board)` — 6-feature NL extraction (material, pawn structure, king safety, open files); guard empty board
+   - `retrieve_pattern_explanation(board)` — `describe_position` → TF-IDF cosine similarity → top-3 docs
+
+3. **`rag/parser.py`**
+   - `parse_multi_game_pgn(pgn_text)` — up to 100 games, raises `ValueError` on bad PGN
+   - `moves_to_san(game)` — walk game tree, call `.san()` with board state at each ply
+   - `extract_board_at_ply(game, ply)` — clamp to last position if ply > game length
+
+4. **`rag/prompts.py`**
+   - `build_prompt(openings, patterns, board, moves)` — returns Groq messages list
+   - System prompt: cite retrieved sources, explain WHY not just WHAT
+
+5. **`app.py`**
+   - `load_index()` with `@st.cache_resource` — `FileNotFoundError` → `st.error` + `st.stop()`
+   - `stream_groq_response(stream)` — unwrap `ChatCompletionChunk` to string generator
+   - `call_groq(messages)` — try each model in `GROQ_MODEL_CHAIN`, catch `RateLimitError` + `NotFoundError`
+   - Game selector, move selector, analysis panel (~80 lines total)
+
+6. **Tests** (`tests/conftest.py`, `test_parser.py`, `test_retriever.py`, `test_prompts.py`)
+   - 20 tests per eng review spec; index-dependent tests marked `@pytest.mark.requires_index`
+   - Run: `uv run pytest` (all) or `uv run pytest -m "not requires_index"` (fast/CI)
+
+7. **Deploy to HF Spaces**
+   - Commit `data/chess_index.pkl` (TF-IDF index, ~small)
+   - Set `GROQ_API_KEY` as HF Space secret
+   - Push; Streamlit SDK auto-deploys
 
 ## What I noticed about how you think
 
