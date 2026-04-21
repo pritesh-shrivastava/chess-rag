@@ -1,0 +1,19 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Environment secrets
+.env
+
+# Generated index (rebuild with: uv run python -m rag.ingestion)
+data/chess_index.pkl
+
+# OS
+.DS_Store
