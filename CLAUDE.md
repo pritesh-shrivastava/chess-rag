@@ -6,7 +6,7 @@ RAG-based chess game analysis. Upload a PGN, pick a move, get AI commentary grou
 
 - Python 3.11, managed with `uv`
 - Streamlit frontend
-- scikit-learn TF-IDF for pattern retrieval
+- sentence-transformers + FAISS for pattern retrieval
 - ECO opening database (dict prefix match, no ML needed)
 - Groq API (llama-3.3-70b-versatile, free tier)
 
@@ -36,13 +36,14 @@ app.py              # Streamlit UI (~80 lines, pure orchestration)
 rag/
   parser.py         # PGN parsing, SAN extraction, board-at-ply
   retriever.py      # ECO lookup, describe_position, pattern retrieval
-  ingestion.py      # Build TF-IDF index from patterns.md (run once)
+  ingestion.py      # Build FAISS index from patterns.md (run once)
   prompts.py        # build_prompt: system prompt + citation instructions
 data/
-  chess_index.pkl   # Serialized TF-IDF vectorizer + matrix (generated)
+  chess_index.faiss  # FAISS vector index (generated, committed)
+  chess_patterns.json # Pattern metadata (generated, committed)
   sources/
     eco.json        # ECO opening codes (public domain)
-    patterns.md     # 25-50 chess pattern descriptions (knowledge base)
+    patterns.md     # 53 chess pattern descriptions (knowledge base)
 tests/
   conftest.py
   test_parser.py
@@ -56,7 +57,7 @@ tests/
 PGN upload → parse_multi_game_pgn() → game selector → move selector
   → retrieve_opening_theory(moves[:ply])     # ECO dict prefix match
   → describe_position(board)                  # NL description of position
-  → retrieve_pattern_explanation(board)       # TF-IDF search over patterns.md
+  → retrieve_pattern_explanation(board)       # FAISS semantic search over patterns.md
   → build_prompt(openings, patterns, board)   # rag/prompts.py
   → call_groq() with 3-model fallback chain   # Groq streaming API
   → st.write_stream()                         # display to user
@@ -67,7 +68,7 @@ PGN upload → parse_multi_game_pgn() → game selector → move selector
 Framework: pytest. Test files in `tests/`. Two categories:
 
 - Normal tests: run anywhere, no index needed
-- `@pytest.mark.requires_index`: need `data/chess_index.pkl` (run `rag.ingestion` first)
+- `@pytest.mark.requires_index`: need `data/chess_index.faiss` (run `rag.ingestion` first)
 
 ```bash
 # All tests
