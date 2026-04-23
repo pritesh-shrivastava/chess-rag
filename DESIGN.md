@@ -106,7 +106,7 @@ rag/ingestion.py:
      - Pattern descriptions from data/sources/patterns.md
   2. Chunk: games by move sequence + annotation, articles by paragraph
   3. Embed with sentence-transformers (all-MiniLM-L6-v2) — no API key
-  4. Store in FAISS index → save to data/chess_index.faiss + chess_index_docs.pkl
+  4. Store in FAISS index → save to data/chess_index.faiss + chess_patterns.json
   Run once at setup. Track index files via Git LFS locally. For HF Spaces deployment,
   use the Hugging Face Hub dataset approach: upload index files as a separate HF Dataset
   (free), download at app startup via `huggingface_hub.hf_hub_download()`.
@@ -158,7 +158,8 @@ chess_rag/
 │   ├── ingestion.py          # Build FAISS index from patterns.md (run once, commit output)
 │   └── prompts.py            # build_prompt: system prompt + citation instructions
 ├── data/
-│   ├── chess_index.pkl       # Serialized TF-IDF vectorizer + matrix (generated, committed)
+│   ├── chess_index.faiss     # FAISS vector index (generated, committed)
+│   ├── chess_patterns.json  # Pattern metadata (generated, committed)
 │   └── sources/
 │       ├── a.tsv–e.tsv       # Lichess ECO database (~3000 openings, loaded as Python dict)
 │       └── patterns.md       # 53 chess pattern descriptions (200 words each, LLM-generated + reviewed)
@@ -249,9 +250,11 @@ game_idx = st.selectbox("Select game", range(len(games)), format_func=lambda i: 
 @st.cache_resource
 def load_index():
     try:
-        with open("data/chess_index.pkl", "rb") as f:
-            return pickle.load(f)  # {"vectorizer": ..., "matrix": ..., "docs": [...]}
-    except FileNotFoundError:
+        import faiss, json
+        index = faiss.read_index("data/chess_index.faiss")
+        patterns = json.loads(open("data/chess_patterns.json").read())
+        return index, patterns
+    except (FileNotFoundError, RuntimeError):
         st.error("Chess knowledge base not found. Run: uv run python -m rag.ingestion")
         st.stop()
 ```
@@ -299,7 +302,7 @@ Example: [1-2 move sequence or FEN context]
 ## Next Steps
 
 ### Done — pre-code scaffold complete
-- [x] `pyproject.toml` — dependencies locked with uv (streamlit, chess, scikit-learn, groq, python-dotenv)
+- [x] `pyproject.toml` — dependencies locked with uv (streamlit, chess, faiss-cpu, sentence-transformers, groq, python-dotenv)
 - [x] `.python-version` — pinned to 3.11
 - [x] `CLAUDE.md` — commands, architecture, skill routing
 - [x] `README.md` — Mermaid flowchart, uv install instructions, stack table
@@ -313,7 +316,7 @@ Example: [1-2 move sequence or FEN context]
 1. **`rag/ingestion.py`** ← start here; nothing else works until the index exists
    - Load all 5 TSV files (`a.tsv`–`e.tsv`), strip move numbers with `re.sub(r'\d+\.+\s*', '', pgn)`, build ECO dict keyed by SAN string
    - Load `data/sources/patterns.md`, split on `## ` headings → list of doc strings
-   - Fit TF-IDF vectorizer on pattern docs, serialize vectorizer + matrix to `data/chess_index.pkl`
+   - Embed with sentence-transformers (all-MiniLM-L6-v2), build FAISS IndexFlatIP, save to `data/chess_index.faiss` + `data/chess_patterns.json`
    - Run with: `uv run python -m rag.ingestion`
 
 2. **`rag/retriever.py`**

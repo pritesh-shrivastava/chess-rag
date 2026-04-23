@@ -17,7 +17,7 @@ flowchart TD
     D --> E
     E --> F[retrieve_opening_theory\nECO prefix match]
     E --> G[describe_position\nboard → natural language]
-    G --> H[TF-IDF search\npatterns.md knowledge base]
+    G --> H[Semantic search\nFAISS + sentence-transformers]
     H --> I[retrieve_pattern_explanation]
     F --> J[build_prompt\nwith citations]
     I --> J
@@ -27,7 +27,7 @@ flowchart TD
 
 ## RAG pipeline
 
-1. **Retrieve** — ECO opening theory (dict prefix match on SAN moves) + tactical pattern (TF-IDF over 50 annotated pattern docs)
+1. **Retrieve** — ECO opening theory (dict prefix match on SAN moves) + tactical pattern (FAISS semantic search over 53 annotated pattern docs)
 2. **Augment** — inject retrieved context into the prompt before the LLM sees it
 3. **Generate** — Groq streams the analysis, citing the retrieved sources
 
@@ -63,7 +63,7 @@ uv run pytest -m "not requires_index"     # skip index-dependent tests
 | Layer | Tech |
 |---|---|
 | Frontend | Streamlit |
-| Pattern retrieval | scikit-learn TF-IDF cosine similarity |
+| Pattern retrieval | sentence-transformers + FAISS cosine similarity |
 | Opening lookup | ECO database (dict prefix match, zero ML) |
 | LLM | Groq free tier (llama-3.3-70b-versatile, 14,400 req/day) |
 | PGN parsing | python-chess |
@@ -73,7 +73,7 @@ uv run pytest -m "not requires_index"     # skip index-dependent tests
 ## Knowledge base
 
 - **ECO openings** — ~100 opening codes with move sequences (public domain, from lichess-org/eco)
-- **Chess patterns** — 50 annotated pattern descriptions (Greek Gift, Back Rank Mate, Isolated Queen Pawn, etc.) — each ~200 words covering position indicators, strategic idea, and example line
+- **Chess patterns** — 53 annotated pattern descriptions (Greek Gift, Back Rank Mate, Isolated Queen Pawn, etc.) — each ~200 words covering position indicators, strategic idea, and example line
 
 ## Why not Stockfish?
 
