@@ -47,8 +47,8 @@ git clone <repo>
 cd chess_rag
 uv sync                          # installs all deps (Python 3.11, managed by uv)
 uv run python -m rag.ingestion   # build the pattern index (run once)
-cp .env.example .env             # add your GROQ_API_KEY (free at console.groq.com)
-uv run streamlit run app.py
+cp .env.example .env             # add GROQ_API_KEY only if you want live Groq commentary
+uv run streamlit run app.py       # works with or without an API key (fallback mode available)
 ```
 
 ## Run tests
