@@ -352,3 +352,8 @@ E98	King's Indian Defense: Orthodox Variation, Classical System, Kozul Gambit	1.
 E98	King's Indian Defense: Orthodox Variation, Classical System, Neo-Classical Line	1. d4 Nf6 2. c4 g6 3. Nc3 Bg7 4. e4 d6 5. Nf3 O-O 6. Be2 e5 7. O-O Nc6 8. d5 Ne7 9. Ne1 Nd7 10. Be3
 E99	King's Indian Defense: Orthodox Variation, Classical System, Benko Attack	1. d4 Nf6 2. c4 g6 3. Nc3 Bg7 4. e4 d6 5. Nf3 O-O 6. Be2 e5 7. O-O Nc6 8. d5 Ne7 9. Ne1 Nd7 10. f3 f5 11. g4
 E99	King's Indian Defense: Orthodox Variation, Classical System, Traditional Line	1. d4 Nf6 2. c4 g6 3. Nc3 Bg7 4. e4 d6 5. Nf3 O-O 6. Be2 e5 7. O-O Nc6 8. d5 Ne7 9. Ne1 Nd7 10. f3 f5
+E60	King's Indian Defense	1. d4 Nf6 2. c4 g6
+E20	Nimzo-Indian Defense	1. d4 Nf6 2. c4 e6 3. Nc3 Bb4
+E00	Catalan Opening	1. d4 Nf6 2. c4 e6 3. g3
+E10	Queen's Pawn Opening	1. d4 Nf6 2. c4 e6 3. Nf3
+E20	Queen's Pawn Opening: Dutch Variation	1. d4 f5

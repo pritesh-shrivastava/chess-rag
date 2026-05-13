@@ -744,3 +744,101 @@ Opposite side castling games are often decided by positional factors that are ac
 Strategic idea: When opposite castling occurs, attack immediately with your pawns. Don't wait to consolidate — every tempo counts. A pawn sacrifice to open files in front of the opponent's king is almost always correct if it creates a forcing attack.
 
 Example: After queenside castling by White and kingside castling by Black — 1.g4 (immediately launches the kingside pawn storm by White, who has castled queenside). The g-pawn becomes the spearhead of a direct attack on Black's king.
+
+---
+
+## Open File Pressure
+
+An open file is a file with no pawns on it. Rooks belong on open files because they can invade, attack weak pawns, and support penetration to the seventh rank. Open-file pressure is one of the simplest and strongest middlegame plans.
+
+Key position indicators: No pawns remain on a file, or an exchange has just opened the file. Both rooks can contest the file, and one side may have a tactical entry point on the 7th rank or against the enemy king.
+
+The power of the open file comes from mobility and access. A rook on an open file can swing between attack and defense, while also controlling key squares the opponent's pieces need. Doubling rooks on an open file increases the pressure dramatically.
+
+Strategic idea: If the file is open, put a rook on it first. If you can double rooks, do it. If you cannot open a file directly, trade pawns to create one — especially the file toward the enemy king.
+
+Example: White rooks on e1 and e2, Black king on e8 — the e-file is open, and Re8+ ideas become available once the file is occupied by heavy pieces.
+
+---
+
+## Half-Open File Pressure
+
+A half-open file is a file where one side has no pawns and the other side still has at least one pawn. Half-open files are ideal routes for rooks and queens because they combine pressure with target access.
+
+Key position indicators: Your pawn is absent from the file, but the opponent still has a pawn there. That pawn becomes the natural target. The file often leads directly to a weak pawn or king shelter pawn.
+
+Half-open files are especially dangerous when paired with a rook lift or queen battery. Even if the file is not fully open, the attacking side can still dominate it because only one side's pawns obstruct the line.
+
+Strategic idea: When you have the half-open file, occupy it with a rook and attack the pawn on that file. If the file points at the king, the attack often becomes immediate.
+
+Example: White has no f-pawn, Black still has f7 — the f-file is half-open for White. A rook on f1 plus queen on h5 can create direct pressure against f7 and h7.
+
+---
+
+## Bishop Pair
+
+The bishop pair is a long-term advantage created when one side retains both bishops while the opponent has only one bishop or no bishops. In open positions, the bishop pair often becomes decisive because the bishops control both color complexes and work across the board.
+
+Key position indicators: One side has two bishops, the other has one bishop or none. The position has open lines, pawn tension, or endgame prospects where long diagonals matter more than short-range piece mobility.
+
+The bishop pair is strongest when the board is open and weakest when the position is locked with pawns on both colors. In practical play, the side with the bishop pair should aim to keep tension and open the position.
+
+Strategic idea: If you own the bishop pair, avoid unnecessary simplification that leaves you with only one bishop. If you're fighting against it, trade into a knight-friendly closed position or eliminate one bishop before the board opens further.
+
+Example: White bishops on c4 and g2 against Black bishop on e7 — White controls both light and dark squares, making it difficult for Black to defend every entry point.
+
+---
+
+## Weak Square
+
+A weak square is a square that cannot be controlled by a pawn and becomes a long-term outpost or invasion point for the opponent. Weak squares often arise after pawn advances that permanently leave holes behind them.
+
+Key position indicators: A pawn has moved, leaving behind a square that no friendly pawn can attack. The opponent can place a piece there and it cannot be chased away by a pawn. Common weak squares are d5, e5, d6, and e6 in many structures.
+
+The value of a weak square increases when it is close to the enemy king or when a knight can occupy it with support. Strong players are constantly looking for squares that pawns can no longer contest.
+
+Strategic idea: Create weak squares with pawn moves only if you gain something concrete. Against weak squares, occupy them with a knight or bishop and use them as an anchor for your attack.
+
+Example: After ...f6, the e6 square becomes weak. A white knight on e6 can dominate the board and restrict the enemy king.
+
+---
+
+## Seventh Rank Invasion
+
+The seventh rank is one of the most powerful invasion routes for rooks. A rook on the seventh rank attacks pawns, cuts off the enemy king, and can often force decisive material gains.
+
+Key position indicators: The rook reaches the 7th rank while the enemy king is still on the back rank. Enemy pawns on the 7th rank become targets. The other rook or queen can support the invasion for doubled pressure.
+
+Seventh-rank invasions are strongest when the attacking side has active pieces and the defender's king is restricted. Even a single rook on the seventh can create mating threats, win pawns, and paralyze the enemy army.
+
+Strategic idea: Put rooks on the 7th rank whenever possible. If you can invade with a rook and keep it there, you often win by force or by harvesting pawns.
+
+Example: Rc7, with both rooks on the c-file and the black king on g8, is a classic seventh-rank entry that attacks c6 and h7 while restricting black's pieces.
+
+---
+
+## Prophylaxis
+
+Prophylaxis is the art of preventing your opponent's plan before it becomes dangerous. Instead of only asking what you can do, you also ask what your opponent wants to do and stop it in advance.
+
+Key position indicators: The opponent has a clear plan — a pawn break, king-side attack, or piece maneuver — and a quiet move can restrict it. Prophylactic moves often look passive but solve a strategic problem before it becomes tactical.
+
+Good prophylaxis improves your position without allowing counterplay. It is especially important in closed positions and maneuvering battles where one tempo can decide who gets the breakthrough.
+
+Strategic idea: Before making your move, ask: "What is my opponent threatening next?" If you can reduce their best plan with a small move, you may prevent a much bigger crisis later.
+
+Example: h3 stops a bishop or knight from landing on g4 and also gives the king luft. It is a simple but classic prophylactic move.
+
+---
+
+## Minority Attack
+
+The minority attack is a queenside strategic plan where the side with fewer queenside pawns advances them to create weaknesses in the opponent's pawn structure, usually in the Queen's Gambit Declined or similar structures.
+
+Key position indicators: One side has fewer queenside pawns than the opponent and can advance b4-b5 or a4-a5 to force structural concessions. The target is often a c-file or a-b pawn structure that can be fixed and attacked.
+
+The minority attack works because the attacker is not trying to win pawns immediately — they are trying to create a lasting weakness, such as an isolated pawn or a backward pawn on c6 or c5.
+
+Strategic idea: Use the minority attack when the center is stable and the queenside structure is fixed. The goal is to create a weakness, then bring rooks and a knight to pressure it.
+
+Example: In the Carlsbad structure, White plays b4-b5 to force ...cxb5 or ...axb5, leaving Black with a weak c6 pawn that can be attacked on the c-file.

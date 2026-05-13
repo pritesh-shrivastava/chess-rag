@@ -13,6 +13,16 @@ def test_retrieve_opening_theory_finds_king_pawn_game() -> None:
     assert results[0]["eco"] == "B00" or results[0]["eco"].startswith("C") or results[0]["eco"].startswith("A")
 
 
+def test_retrieve_opening_theory_finds_italian_game() -> None:
+    results = retriever.retrieve_opening_theory(["e4", "e5", "Nf3", "Nc6", "Bc4"])
+    assert any("Italian" in result["name"] for result in results)
+
+
+def test_retrieve_opening_theory_finds_london_system() -> None:
+    results = retriever.retrieve_opening_theory(["d4", "d5", "Bf4"])
+    assert any("London" in result["name"] for result in results)
+
+
 def test_describe_position_mentions_material_and_structure() -> None:
     board = chess.Board()
     text = retriever.describe_position(board)
