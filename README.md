@@ -51,6 +51,20 @@ cp .env.example .env             # add GROQ_API_KEY only if you want live Groq c
 uv run streamlit run app.py       # works with or without an API key (fallback mode available)
 ```
 
+## Demo with the bundled sample PGN
+
+If you want to sanity-check the full pipeline without exporting your own game yet, open `examples/sample_game.pgn`.
+It contains two short games that exercise:
+
+- multi-game parsing
+- game selection
+- move selection
+- opening lookup
+- pattern retrieval
+- local fallback commentary when `GROQ_API_KEY` is missing
+
+The sample file is also used by the test suite as a smoke check.
+
 ## Run tests
 
 ```bash
@@ -59,6 +73,8 @@ uv run pytest -m "not requires_index"     # skip index-dependent tests
 ```
 
 ## Stack
+
+- The project uses `pyproject.toml` for ranges and `uv.lock` for exact pinned dependency versions.
 
 | Layer | Tech |
 |---|---|

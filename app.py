@@ -19,6 +19,16 @@ DEFAULT_MODELS = [
 ]
 
 
+def _groq_setup_notice() -> str | None:
+    api_key = os.getenv("GROQ_API_KEY")
+    if api_key:
+        return None
+    return (
+        "No GROQ_API_KEY is configured, so the app is using local fallback commentary. "
+        "Copy .env.example to .env and add your Groq key to enable live model responses."
+    )
+
+
 def _game_label(game: chess.pgn.Game) -> str:
     white = game.headers.get("White", "White")
     black = game.headers.get("Black", "Black")
@@ -104,9 +114,13 @@ def main() -> None:
     st.title("♟️ Chess RAG")
     st.caption("Upload a PGN, choose a move, and get commentary grounded in opening theory and chess patterns.")
 
+    notice = _groq_setup_notice()
+    if notice:
+        st.info(notice)
+
     uploaded = st.file_uploader("Upload a PGN file", type=["pgn", "txt"])
     if not uploaded:
-        st.info("Upload a PGN to start.")
+        st.info("Upload a PGN to start. You can use the sample file in examples/sample_game.pgn.")
         return
 
     try:
