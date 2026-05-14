@@ -34,6 +34,16 @@ def _groq_setup_notice() -> str | None:
     )
 
 
+def decode_uploaded_pgn(payload: bytes) -> str:
+    """Decode uploaded PGN bytes using common export encodings."""
+    for encoding in ("utf-8-sig", "utf-8", "latin-1"):
+        try:
+            return payload.decode(encoding)
+        except UnicodeDecodeError:
+            continue
+    raise UnicodeDecodeError("utf-8", payload, 0, 1, "Unable to decode uploaded PGN")
+
+
 def _game_label(game: chess.pgn.Game) -> str:
     white = game.headers.get("White", "White")
     black = game.headers.get("Black", "Black")
@@ -66,8 +76,7 @@ def stream_groq_response(stream: Iterable) -> Iterable[str]:
 
 
 @st.cache_resource
-def _groq_client():
-    api_key = os.getenv("GROQ_API_KEY")
+def _groq_client(api_key: str | None):
     if not api_key:
         return None
     from groq import Groq  # local import so app still loads without the package at runtime
@@ -75,10 +84,11 @@ def _groq_client():
     return Groq(api_key=api_key)
 
 
-def call_groq(messages: list[dict]) -> str | None:
-    client = _groq_client()
+def call_groq(messages: list[dict]) -> bool:
+    api_key = os.getenv("GROQ_API_KEY")
+    client = _groq_client(api_key)
     if client is None:
-        return None
+        return False
 
     last_error: Exception | None = None
     models = [os.getenv("GROQ_MODEL")] if os.getenv("GROQ_MODEL") else DEFAULT_MODELS
@@ -92,13 +102,14 @@ def call_groq(messages: list[dict]) -> str | None:
                 temperature=0.2,
                 stream=True,
             )
-            return st.write_stream(stream_groq_response(response))
+            st.write_stream(stream_groq_response(response))
+            return True
         except Exception as exc:  # noqa: BLE001 - fallback chain on provider errors
             last_error = exc
             continue
     if last_error:
         st.warning(f"Groq unavailable right now: {last_error}")
-    return None
+    return False
 
 
 def fallback_commentary(openings: list[dict], patterns: list[str], board: chess.Board, moves: list[str]) -> str:
@@ -129,8 +140,11 @@ def main() -> None:
         return
 
     try:
-        pgn_text = uploaded.read().decode("utf-8")
+        pgn_text = decode_uploaded_pgn(uploaded.read())
         games = parse_multi_game_pgn(pgn_text)
+    except UnicodeDecodeError:
+        st.error("Could not decode PGN file. Try exporting as UTF-8 PGN or plain text.")
+        return
     except Exception as exc:  # noqa: BLE001
         st.error(f"Could not parse PGN: {exc}")
         return
@@ -166,10 +180,9 @@ def main() -> None:
 
     messages = build_prompt(openings, patterns, board, prior_moves)
     st.subheader("Commentary")
-    commentary = call_groq(messages)
-    if commentary is None:
-        commentary = fallback_commentary(openings, patterns, board, prior_moves)
-    st.write(commentary)
+    streamed = call_groq(messages)
+    if not streamed:
+        st.write(fallback_commentary(openings, patterns, board, prior_moves))
 
 
 if __name__ == "__main__":

@@ -38,6 +38,38 @@ def test_sample_pgn_pipeline_builds_commentary_prompt(sample_pgn_text: str) -> N
     assert "Back Rank Mate" in user_content
 
 
+def test_decode_uploaded_pgn_prefers_utf8_variants() -> None:
+    assert app.decode_uploaded_pgn("[Event \"UTF8\"]\n".encode("utf-8")) == "[Event \"UTF8\"]\n"
+    assert app.decode_uploaded_pgn("[Event \"BOM\"]\n".encode("utf-8-sig")) == "[Event \"BOM\"]\n"
+
+
+def test_decode_uploaded_pgn_falls_back_to_latin1() -> None:
+    text = "[White \"Jos\xe9\"]\n\n1. e4 e5 1-0\n"
+    payload = text.encode("latin-1")
+    assert app.decode_uploaded_pgn(payload) == text
+
+
+def test_call_groq_streams_successful_response_once(monkeypatch) -> None:
+    class DummyClient:
+        class chat:
+            class completions:
+                @staticmethod
+                def create(**kwargs):
+                    return [object()]
+
+    captured = {"write_stream_calls": 0, "writes": []}
+
+    monkeypatch.setattr(app, "_groq_client", lambda api_key: DummyClient())
+    monkeypatch.setattr(app.st, "write_stream", lambda stream: captured.__setitem__("write_stream_calls", captured["write_stream_calls"] + 1) or "streamed text")
+    monkeypatch.setattr(app.st, "write", lambda value: captured["writes"].append(value))
+
+    streamed = app.call_groq([{"role": "user", "content": "hi"}])
+
+    assert streamed is True
+    assert captured["write_stream_calls"] == 1
+    assert captured["writes"] == []
+
+
 def test_sample_pgn_example_file_exists() -> None:
     example = Path("examples/sample_game.pgn")
     assert example.exists()
