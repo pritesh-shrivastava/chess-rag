@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import chess
+
 import app
 from rag.parser import extract_board_at_ply, moves_to_san, parse_multi_game_pgn
 from rag.prompts import build_prompt
@@ -68,6 +70,34 @@ def test_call_groq_streams_successful_response_once(monkeypatch) -> None:
     assert streamed is True
     assert captured["write_stream_calls"] == 1
     assert captured["writes"] == []
+
+
+def test_resolve_pattern_context_surfaces_retrieval_warning(monkeypatch) -> None:
+    monkeypatch.setattr(
+        app,
+        "retrieve_pattern_context",
+        lambda board: {"patterns": [], "warning": "Pattern retrieval is unavailable right now."},
+    )
+
+    patterns, warning = app.resolve_pattern_context(chess.Board())
+
+    assert patterns == []
+    assert warning == "Pattern retrieval is unavailable right now."
+
+
+
+def test_resolve_pattern_context_keeps_true_no_match_silent(monkeypatch) -> None:
+    monkeypatch.setattr(
+        app,
+        "retrieve_pattern_context",
+        lambda board: {"patterns": [], "warning": None},
+    )
+
+    patterns, warning = app.resolve_pattern_context(chess.Board())
+
+    assert patterns == []
+    assert warning is None
+
 
 
 def test_sample_pgn_example_file_exists() -> None:

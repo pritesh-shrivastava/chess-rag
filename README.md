@@ -18,7 +18,7 @@ flowchart TD
     E --> F[retrieve_opening_theory\nECO prefix match]
     E --> G[describe_position\nboard → natural language]
     G --> H[Semantic search\nFAISS + sentence-transformers]
-    H --> I[retrieve_pattern_explanation]
+    H --> I[retrieve_pattern_context\npatterns + warning state]
     F --> J[build_prompt\nwith citations]
     I --> J
     J --> K[Groq API\nllama-3.3-70b-versatile]
@@ -27,7 +27,7 @@ flowchart TD
 
 ## RAG pipeline
 
-1. **Retrieve** — ECO opening theory (dict prefix match on SAN moves) + tactical pattern (FAISS semantic search over 53 annotated pattern docs)
+1. **Retrieve** — ECO opening theory (dict prefix match on SAN moves) + tactical pattern retrieval context (`patterns` plus a `warning` when the retrieval system is unavailable)
 2. **Augment** — inject retrieved context into the prompt before the LLM sees it
 3. **Generate** — Groq streams the analysis, citing the retrieved sources
 
@@ -35,9 +35,10 @@ The retrieval functions are named and structured so the agentic architecture is 
 
 ```python
 openings = retrieve_opening_theory(moves[:ply])        # ECO: what opening is this?
-patterns = retrieve_pattern_explanation(board)          # patterns.md: what's happening here?
+context  = retrieve_pattern_context(board)             # patterns.md: matches + retrieval warning
+patterns = context["patterns"]
 prompt   = build_prompt(openings, patterns, board, moves)
-response = call_groq(prompt, stream=True)
+response = call_groq(prompt)
 ```
 
 ## Run locally
@@ -52,6 +53,15 @@ uv run streamlit run app.py      # works with or without an API key (fallback mo
 ```
 
 If `data/chess_index.faiss` or `data/chess_patterns.json` is missing, the app now stays usable: it shows opening theory, skips pattern matches, and surfaces a warning telling you to rebuild the index.
+
+If the vector artifacts exist but model/index loading fails for some other reason, the app also stays usable: it labels pattern retrieval as temporarily unavailable instead of pretending there was simply “no pattern match.”
+
+## Operational behavior
+
+- **No `GROQ_API_KEY`**: the app still works and falls back to deterministic local commentary.
+- **Missing / empty / invalid FAISS artifacts**: the UI warns that the pattern index must be rebuilt with `uv run python -m rag.ingestion`.
+- **Pattern retrieval runtime failure**: the UI warns that retrieval is unavailable right now, while opening lookup and fallback commentary still work.
+- **True no-match case**: the UI shows `No pattern match` *without* a warning, so “no match” is distinct from “retrieval system broken.”
 
 ## Demo with the bundled sample PGN
 

@@ -65,9 +65,9 @@ Elements absorbed into B as structured retrieval functions.
 functions named like agent tools.**
 
 The retrieval layer is implemented as named Python functions:
-- `retrieve_opening_theory(fen: str) -> list[str]` — finds matching ECO codes + theory
-- `retrieve_similar_positions(fen: str, n: int) -> list[Game]` — finds similar annotated games
-- `retrieve_pattern_explanation(pattern_name: str) -> str` — fetches pattern docs
+- `retrieve_opening_theory(moves: list[str]) -> list[dict]` — finds matching ECO codes + theory
+- `describe_position(board: chess.Board) -> str` — converts board state into a semantic retrieval query
+- `retrieve_pattern_context(board: chess.Board, top_k: int = 3) -> dict[str, list[str] | str | None]` — returns pattern matches plus an optional retrieval warning
 
 These functions are called explicitly (not by an agent) but are named and structured so
 you can explain the agentic architecture pattern in interviews. Easy upgrade path to full
@@ -130,12 +130,12 @@ app.py (Streamlit):
   1. User uploads PGN → parse with python-chess
   2. User selects a move from dropdown → extract FEN at that position
   3. Retrieval (rag/retriever.py):
-     a. retrieve_opening_theory(fen) → top 3 matching ECO lines
-     b. retrieve_similar_positions(fen) → top 3 annotated games with similar structure
-     c. Pattern flow (two steps):
-        i.  Ask LLM: "Given these retrieved games and this FEN, name the main
-            tactical/strategic pattern." → returns e.g. "Greek Gift sacrifice"
-        ii. retrieve_pattern_explanation("Greek Gift sacrifice") → 1 pattern doc
+     a. retrieve_opening_theory(moves[:ply]) → top 3 matching ECO lines
+     b. describe_position(board) → natural-language query for semantic search
+     c. retrieve_pattern_context(board) → `{patterns, warning}`
+        - missing artifacts: warning tells the operator to rebuild the FAISS index
+        - runtime retrieval failure: warning says retrieval is temporarily unavailable
+        - true no-match: empty `patterns` with `warning=None`
   4. Build augmented prompt via rag/prompts.py:
      - System prompt instructs: "Always cite the game, player, and year when referencing
        a historical position. Use the retrieved context as your primary source of truth."
@@ -145,8 +145,11 @@ app.py (Streamlit):
        with Ollama: `ollama pull llama3.1 && streamlit run app.py`"
   6. Display: AI commentary + source citations (game name, player, year)
   Guardrails:
-     - If the committed FAISS artifacts are missing, surface a UI warning and skip
+     - If the committed FAISS artifacts are missing or effectively invalid/empty, surface a UI warning and skip
        pattern retrieval instead of crashing the app.
+     - If the retrieval stack fails for another reason (corrupt index, model load error,
+       incompatible runtime), surface a different UI warning so operators can distinguish
+       retrieval-system failure from a real “no pattern match” result.
   Note: No visual chessboard in MVP. Move list in algebraic notation. Visual board
         deferred to v2 if users request it.
 ```
@@ -157,7 +160,7 @@ chess_rag/
 ├── app.py                    # Streamlit UI only: widgets + orchestration calls (~80 lines)
 ├── rag/
 │   ├── parser.py             # parse_multi_game_pgn, moves_to_san, extract_board_at_ply
-│   ├── retriever.py          # retrieve_opening_theory, describe_position, retrieve_pattern_explanation
+│   ├── retriever.py          # retrieve_opening_theory, describe_position, retrieve_pattern_context
 │   ├── ingestion.py          # Build FAISS index from patterns.md (run once, commit output)
 │   └── prompts.py            # build_prompt: system prompt + citation instructions
 ├── data/
@@ -207,9 +210,13 @@ def describe_position(board: chess.Board) -> str:
     isolated pawns. White king safely castled; Black king exposed in center.'
     """
 
-def retrieve_pattern_explanation(board: chess.Board) -> list[str]:
-    """describe_position(board) -> embed -> FAISS top-3 search -> pattern docs"""
-    # Model cached via @st.cache_resource
+def retrieve_pattern_context(board: chess.Board, top_k: int = 3) -> dict[str, list[str] | str | None]:
+    """describe_position(board) -> embed -> FAISS top-k search -> pattern docs + optional warning.
+    Returns:
+    - {"patterns": [...], "warning": None} on success
+    - {"patterns": [], "warning": "...rebuild..."} when artifacts are missing
+    - {"patterns": [], "warning": "...unavailable..."} on runtime retrieval failure
+    """
 
 # rag/prompts.py
 def build_prompt(
@@ -325,7 +332,7 @@ Example: [1-2 move sequence or FEN context]
 2. **`rag/retriever.py`**
    - `retrieve_opening_theory(moves)` — ECO dict prefix match (longest prefix wins)
    - `describe_position(board)` — 6-feature NL extraction (material, pawn structure, king safety, open files); guard empty board
-   - `retrieve_pattern_explanation(board)` — `describe_position` → TF-IDF cosine similarity → top-3 docs
+   - `retrieve_pattern_context(board)` — `describe_position` → embeddings + FAISS → top-3 docs plus warning state for missing/corrupt retrieval artifacts
 
 3. **`rag/parser.py`**
    - `parse_multi_game_pgn(pgn_text)` — up to 100 games, raises `ValueError` on bad PGN

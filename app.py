@@ -12,9 +12,8 @@ from rag.parser import extract_board_at_ply, moves_to_san, parse_multi_game_pgn
 from rag.prompts import build_prompt
 from rag.retriever import (
     describe_position,
-    pattern_knowledge_base_ready,
     retrieve_opening_theory,
-    retrieve_pattern_explanation,
+    retrieve_pattern_context,
 )
 
 DEFAULT_MODELS = [
@@ -125,6 +124,14 @@ def fallback_commentary(openings: list[dict], patterns: list[str], board: chess.
     )
 
 
+
+def resolve_pattern_context(board: chess.Board) -> tuple[list[str], str | None]:
+    """Return pattern matches plus an optional UI warning."""
+    context = retrieve_pattern_context(board)
+    return context["patterns"], context["warning"]
+
+
+
 def main() -> None:
     st.set_page_config(page_title="Chess RAG", page_icon="♟️", layout="wide")
     st.title("♟️ Chess RAG")
@@ -168,11 +175,9 @@ def main() -> None:
     with col2:
         st.subheader("Retrieval context")
         openings = retrieve_opening_theory(prior_moves)
-        if pattern_knowledge_base_ready():
-            patterns = retrieve_pattern_explanation(board)
-        else:
-            patterns = []
-            st.warning("Pattern index is missing; run `uv run python -m rag.ingestion` to rebuild it.")
+        patterns, pattern_warning = resolve_pattern_context(board)
+        if pattern_warning:
+            st.warning(pattern_warning)
         st.write("**Opening theory**")
         st.write(openings if openings else ["No opening match"])
         st.write("**Pattern matches**")

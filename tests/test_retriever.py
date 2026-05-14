@@ -54,3 +54,100 @@ def test_retrieve_pattern_explanation_filters_invalid_indices(monkeypatch) -> No
 
     board = chess.Board()
     assert retriever.retrieve_pattern_explanation(board, top_k=3) == ["pattern 1", "pattern 0"]
+
+
+def test_retrieve_pattern_explanation_context_distinguishes_failure_from_no_match(monkeypatch) -> None:
+    monkeypatch.setattr(retriever, "_load_model", lambda: (_ for _ in ()).throw(RuntimeError("model load failed")))
+
+    board = chess.Board()
+    context = retriever.retrieve_pattern_context(board)
+
+    assert context["patterns"] == []
+    assert "Pattern retrieval is unavailable" in context["warning"]
+
+
+
+def test_retrieve_pattern_explanation_context_reports_no_match_without_warning(monkeypatch) -> None:
+    class DummyModel:
+        def encode(self, texts, convert_to_numpy=True):
+            return np.ones((1, 3), dtype="float32")
+
+    class DummyIndex:
+        ntotal = 2
+
+        def search(self, embedding, top_k):
+            return None, np.array([[-1, -1, -1]])
+
+    monkeypatch.setattr(retriever, "_load_model", lambda: DummyModel())
+    monkeypatch.setattr(retriever, "_load_index_and_patterns", lambda: (DummyIndex(), [
+        {"text": "pattern 0"},
+        {"text": "pattern 1"},
+    ]))
+
+    board = chess.Board()
+    context = retriever.retrieve_pattern_context(board)
+
+    assert context == {"patterns": [], "warning": None}
+
+
+
+def test_retrieve_pattern_context_reports_search_failures_as_warning(monkeypatch) -> None:
+    class DummyModel:
+        def encode(self, texts, convert_to_numpy=True):
+            raise RuntimeError("embedding backend failed")
+
+    class DummyIndex:
+        ntotal = 2
+
+        def search(self, embedding, top_k):
+            return None, np.array([[0]])
+
+    monkeypatch.setattr(retriever, "_load_model", lambda: DummyModel())
+    monkeypatch.setattr(retriever, "_load_index_and_patterns", lambda: (DummyIndex(), [{"text": "pattern 0"}]))
+
+    context = retriever.retrieve_pattern_context(chess.Board())
+
+    assert context["patterns"] == []
+    assert "Pattern retrieval is unavailable" in context["warning"]
+
+
+
+def test_retrieve_pattern_context_reports_unexpected_search_failures_as_warning(monkeypatch) -> None:
+    class DummyModel:
+        def encode(self, texts, convert_to_numpy=True):
+            return np.ones((1, 3), dtype="float32")
+
+    class DummyIndex:
+        ntotal = 2
+
+        def search(self, embedding, top_k):
+            raise TypeError("faiss returned unexpected shape")
+
+    monkeypatch.setattr(retriever, "_load_model", lambda: DummyModel())
+    monkeypatch.setattr(retriever, "_load_index_and_patterns", lambda: (DummyIndex(), [{"text": "pattern 0"}]))
+
+    context = retriever.retrieve_pattern_context(chess.Board())
+
+    assert context["patterns"] == []
+    assert "Pattern retrieval is unavailable" in context["warning"]
+
+
+
+def test_retrieve_pattern_context_warns_when_index_is_empty(monkeypatch) -> None:
+    class DummyModel:
+        def encode(self, texts, convert_to_numpy=True):
+            return np.ones((1, 3), dtype="float32")
+
+    class DummyIndex:
+        ntotal = 0
+
+        def search(self, embedding, top_k):
+            return None, np.array([[]], dtype=int)
+
+    monkeypatch.setattr(retriever, "_load_model", lambda: DummyModel())
+    monkeypatch.setattr(retriever, "_load_index_and_patterns", lambda: (DummyIndex(), []))
+
+    context = retriever.retrieve_pattern_context(chess.Board())
+
+    assert context["patterns"] == []
+    assert "rebuild" in context["warning"]

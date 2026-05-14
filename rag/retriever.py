@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import json
+import logging
 from functools import lru_cache
 from pathlib import Path
 
@@ -16,6 +17,7 @@ from rag.ingestion import FAISS_INDEX_PATH, MODEL_NAME, PATTERNS_JSON_PATH
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 SOURCES_DIR = DATA_DIR / "sources"
+LOGGER = logging.getLogger(__name__)
 
 
 @lru_cache(maxsize=1)
@@ -169,23 +171,50 @@ def describe_position(board: chess.Board) -> str:
     return f"{material} {structure} {pawn_notes} {safety}"
 
 
-def retrieve_pattern_explanation(board: chess.Board, top_k: int = 3) -> list[str]:
-    """Embed a natural-language description of the position and return top-k matching patterns."""
+def retrieve_pattern_context(board: chess.Board, top_k: int = 3) -> dict[str, list[str] | str | None]:
+    """Return pattern matches plus an optional warning for retrieval-system failures."""
     if top_k <= 0:
-        return []
+        return {"patterns": [], "warning": None}
 
     try:
         model = _load_model()
         index, patterns = _load_index_and_patterns()
-    except (FileNotFoundError, OSError, RuntimeError, ValueError):
-        return []
+    except FileNotFoundError:
+        return {
+            "patterns": [],
+            "warning": "Pattern index is missing; run `uv run python -m rag.ingestion` to rebuild it.",
+        }
+    except Exception as exc:
+        LOGGER.warning("Pattern retrieval unavailable during load: %s", exc)
+        return {
+            "patterns": [],
+            "warning": "Pattern retrieval is unavailable right now; opening theory still works, but pattern matches could not be loaded.",
+        }
 
     ntotal = getattr(index, "ntotal", None)
     if not patterns or (ntotal is not None and ntotal <= 0):
-        return []
+        return {
+            "patterns": [],
+            "warning": "Pattern index is empty or invalid; run `uv run python -m rag.ingestion` to rebuild it.",
+        }
 
-    query = describe_position(board)
-    embedding = model.encode([query], convert_to_numpy=True).astype("float32")
-    faiss.normalize_L2(embedding)
-    _, indices = index.search(embedding, top_k)
-    return [patterns[i]["text"] for i in indices[0] if 0 <= i < len(patterns)]
+    try:
+        query = describe_position(board)
+        embedding = model.encode([query], convert_to_numpy=True).astype("float32")
+        faiss.normalize_L2(embedding)
+        _, indices = index.search(embedding, top_k)
+    except Exception as exc:
+        LOGGER.warning("Pattern retrieval unavailable during search: %s", exc)
+        return {
+            "patterns": [],
+            "warning": "Pattern retrieval is unavailable right now; opening theory still works, but pattern matches could not be loaded.",
+        }
+
+    matches = [patterns[i]["text"] for i in indices[0] if 0 <= i < len(patterns)]
+    return {"patterns": matches, "warning": None}
+
+
+
+def retrieve_pattern_explanation(board: chess.Board, top_k: int = 3) -> list[str]:
+    """Embed a natural-language description of the position and return top-k matching patterns."""
+    return retrieve_pattern_context(board, top_k=top_k)["patterns"]
