@@ -48,8 +48,10 @@ cd chess_rag
 uv sync                          # installs all deps (Python 3.11, managed by uv)
 uv run python -m rag.ingestion   # build the pattern index (run once)
 cp .env.example .env             # add GROQ_API_KEY only if you want live Groq commentary
-uv run streamlit run app.py       # works with or without an API key (fallback mode available)
+uv run streamlit run app.py      # works with or without an API key (fallback mode available)
 ```
+
+If `data/chess_index.faiss` or `data/chess_patterns.json` is missing, the app now stays usable: it shows opening theory, skips pattern matches, and surfaces a warning telling you to rebuild the index.
 
 ## Demo with the bundled sample PGN
 

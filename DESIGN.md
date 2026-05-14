@@ -140,10 +140,13 @@ app.py (Streamlit):
      - System prompt instructs: "Always cite the game, player, and year when referencing
        a historical position. Use the retrieved context as your primary source of truth."
      - Retrieved context is injected before the user's question
-  5. Call LLM: Groq (if GROQ_API_KEY set) else Ollama local → stream to Streamlit
+  5. Call LLM: Groq (if GROQ_API_KEY set) else deterministic local fallback commentary → stream to Streamlit
      - Groq quota exceeded: show friendly message "Daily limit reached. Run locally
        with Ollama: `ollama pull llama3.1 && streamlit run app.py`"
   6. Display: AI commentary + source citations (game name, player, year)
+  Guardrails:
+     - If the committed FAISS artifacts are missing, surface a UI warning and skip
+       pattern retrieval instead of crashing the app.
   Note: No visual chessboard in MVP. Move list in algebraic notation. Visual board
         deferred to v2 if users request it.
 ```

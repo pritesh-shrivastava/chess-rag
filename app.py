@@ -10,7 +10,12 @@ import streamlit as st
 
 from rag.parser import extract_board_at_ply, moves_to_san, parse_multi_game_pgn
 from rag.prompts import build_prompt
-from rag.retriever import describe_position, retrieve_opening_theory, retrieve_pattern_explanation
+from rag.retriever import (
+    describe_position,
+    pattern_knowledge_base_ready,
+    retrieve_opening_theory,
+    retrieve_pattern_explanation,
+)
 
 DEFAULT_MODELS = [
     "llama-3.3-70b-versatile",
@@ -24,7 +29,7 @@ def _groq_setup_notice() -> str | None:
     if api_key:
         return None
     return (
-        "No GROQ_API_KEY is configured, so the app is using local fallback commentary. "
+        "No GROQ_API_KEY is configured, so the app will use deterministic fallback commentary. "
         "Copy .env.example to .env and add your Groq key to enable live model responses."
     )
 
@@ -149,7 +154,11 @@ def main() -> None:
     with col2:
         st.subheader("Retrieval context")
         openings = retrieve_opening_theory(prior_moves)
-        patterns = retrieve_pattern_explanation(board)
+        if pattern_knowledge_base_ready():
+            patterns = retrieve_pattern_explanation(board)
+        else:
+            patterns = []
+            st.warning("Pattern index is missing; run `uv run python -m rag.ingestion` to rebuild it.")
         st.write("**Opening theory**")
         st.write(openings if openings else ["No opening match"])
         st.write("**Pattern matches**")

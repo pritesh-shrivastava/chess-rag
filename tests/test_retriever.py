@@ -30,14 +30,21 @@ def test_describe_position_mentions_material_and_structure() -> None:
     assert "closed" in text.lower()
 
 
-def test_retrieve_pattern_explanation_uses_index_and_model(monkeypatch) -> None:
+def test_retrieve_pattern_explanation_returns_empty_when_index_missing(monkeypatch) -> None:
+    monkeypatch.setattr(retriever, "_load_model", lambda: (_ for _ in ()).throw(FileNotFoundError()))
+
+    board = chess.Board()
+    assert retriever.retrieve_pattern_explanation(board) == []
+
+
+def test_retrieve_pattern_explanation_filters_invalid_indices(monkeypatch) -> None:
     class DummyModel:
         def encode(self, texts, convert_to_numpy=True):
             return np.ones((1, 3), dtype="float32")
 
     class DummyIndex:
         def search(self, embedding, top_k):
-            return None, np.array([[1, 0]])
+            return None, np.array([[1, -1, 0]])
 
     monkeypatch.setattr(retriever, "_load_model", lambda: DummyModel())
     monkeypatch.setattr(retriever, "_load_index_and_patterns", lambda: (DummyIndex(), [
@@ -46,5 +53,4 @@ def test_retrieve_pattern_explanation_uses_index_and_model(monkeypatch) -> None:
     ]))
 
     board = chess.Board()
-    patterns = retriever.retrieve_pattern_explanation(board, top_k=2)
-    assert patterns == ["pattern 1", "pattern 0"]
+    assert retriever.retrieve_pattern_explanation(board, top_k=3) == ["pattern 1", "pattern 0"]

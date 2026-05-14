@@ -30,6 +30,11 @@ def _load_index_and_patterns() -> tuple[faiss.Index, list[dict]]:
     return index, patterns
 
 
+def pattern_knowledge_base_ready() -> bool:
+    """Return True when the committed FAISS artifacts are available."""
+    return FAISS_INDEX_PATH.exists() and PATTERNS_JSON_PATH.exists()
+
+
 @lru_cache(maxsize=1)
 def _load_eco() -> dict[str, dict]:
     eco: dict[str, dict] = {}
@@ -165,11 +170,22 @@ def describe_position(board: chess.Board) -> str:
 
 
 def retrieve_pattern_explanation(board: chess.Board, top_k: int = 3) -> list[str]:
-    """Embed a NL description of the position and return top-k matching patterns."""
-    model = _load_model()
-    index, patterns = _load_index_and_patterns()
+    """Embed a natural-language description of the position and return top-k matching patterns."""
+    if top_k <= 0:
+        return []
+
+    try:
+        model = _load_model()
+        index, patterns = _load_index_and_patterns()
+    except (FileNotFoundError, OSError, RuntimeError, ValueError):
+        return []
+
+    ntotal = getattr(index, "ntotal", None)
+    if not patterns or (ntotal is not None and ntotal <= 0):
+        return []
+
     query = describe_position(board)
     embedding = model.encode([query], convert_to_numpy=True).astype("float32")
     faiss.normalize_L2(embedding)
     _, indices = index.search(embedding, top_k)
-    return [patterns[i]["text"] for i in indices[0] if i < len(patterns)]
+    return [patterns[i]["text"] for i in indices[0] if 0 <= i < len(patterns)]
